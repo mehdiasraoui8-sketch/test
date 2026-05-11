@@ -14,7 +14,14 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--port", required=True, help="Serial port (for example COM3 or /dev/ttyUSB0)")
     parser.add_argument("--file", required=True, help="Path to .gcode file")
-    parser.add_argument("--baud", type=int, default=115200, help="Baud rate (default: 115200)")
+    parser.add_argument(
+        "--baud",
+        "--baud-rate",
+        dest="baud",
+        type=int,
+        default=115200,
+        help="Baud rate (default: 115200)",
+    )
     parser.add_argument(
         "--line-timeout",
         type=float,
@@ -62,6 +69,7 @@ def initialize_grbl(ser: serial.Serial, soft_reset: bool) -> None:
 
 
 def clean_gcode_line(raw_line: str) -> str:
+    """Strip whitespace and common GRBL comment styles from a G-code line."""
     line = raw_line.strip()
     if not line:
         return ""
@@ -80,10 +88,10 @@ def wait_for_grbl_response(ser: serial.Serial, timeout: float) -> None:
             time.sleep(0.01)
             continue
 
-        lowered = response.lower()
-        if lowered == "ok":
+        response_lower = response.lower()
+        if response_lower == "ok":
             return
-        if lowered.startswith("error") or lowered.startswith("alarm"):
+        if response_lower.startswith("error") or response_lower.startswith("alarm"):
             raise RuntimeError(response)
 
         print(f"[GRBL] {response}")
