@@ -76,6 +76,8 @@ def clean_gcode_line(raw_line: str) -> str:
 
     line = line.split(";", 1)[0]
     line = re.sub(r"\([^)]*\)", "", line)
+    if "(" in line:
+        line = line.split("(", 1)[0]
 
     return line.strip()
 
@@ -85,7 +87,7 @@ def wait_for_grbl_response(ser: serial.Serial, timeout: float) -> None:
     while time.time() - started < timeout:
         response = read_line(ser)
         if not response:
-            time.sleep(0.01)
+            time.sleep(0.05)
             continue
 
         response_lower = response.lower()
