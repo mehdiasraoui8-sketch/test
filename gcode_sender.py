@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import re
 import sys
 import time
 from pathlib import Path
@@ -19,6 +20,18 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=10.0,
         help="Seconds to wait for ok/error after sending each line (default: 10)",
+    )
+    parser.add_argument(
+        "--read-timeout",
+        type=float,
+        default=1.0,
+        help="Serial read timeout in seconds (default: 1)",
+    )
+    parser.add_argument(
+        "--write-timeout",
+        type=float,
+        default=2.0,
+        help="Serial write timeout in seconds (default: 2)",
     )
     parser.add_argument(
         "--soft-reset",
@@ -53,16 +66,8 @@ def clean_gcode_line(raw_line: str) -> str:
     if not line:
         return ""
 
-    semicolon_index = line.find(";")
-    if semicolon_index != -1:
-        line = line[:semicolon_index]
-
-    while "(" in line and ")" in line:
-        start = line.find("(")
-        end = line.find(")", start)
-        if end == -1:
-            break
-        line = line[:start] + line[end + 1 :]
+    line = line.split(";", 1)[0]
+    line = re.sub(r"\([^)]*\)", "", line)
 
     return line.strip()
 
@@ -112,7 +117,12 @@ def main() -> int:
         return 2
 
     try:
-        with serial.Serial(args.port, args.baud, timeout=1, write_timeout=2) as ser:
+        with serial.Serial(
+            args.port,
+            args.baud,
+            timeout=args.read_timeout,
+            write_timeout=args.write_timeout,
+        ) as ser:
             initialize_grbl(ser, soft_reset=args.soft_reset)
             stream_gcode(ser, gcode_path, line_timeout=args.line_timeout)
     except serial.SerialException as exc:
