@@ -52,9 +52,19 @@ def clean_gcode_line(raw_line: str) -> str:
     line = raw_line.strip()
     if not line:
         return ""
-    if line.startswith(";") or line.startswith("("):
-        return ""
-    return line
+
+    semicolon_index = line.find(";")
+    if semicolon_index != -1:
+        line = line[:semicolon_index]
+
+    while "(" in line and ")" in line:
+        start = line.find("(")
+        end = line.find(")", start)
+        if end == -1:
+            break
+        line = line[:start] + line[end + 1 :]
+
+    return line.strip()
 
 
 def wait_for_grbl_response(ser: serial.Serial, timeout: float) -> None:
@@ -62,6 +72,7 @@ def wait_for_grbl_response(ser: serial.Serial, timeout: float) -> None:
     while time.time() - started < timeout:
         response = read_line(ser)
         if not response:
+            time.sleep(0.01)
             continue
 
         lowered = response.lower()
